@@ -1,0 +1,10 @@
+spring:
+  ai:
+    openai:
+      api-key: ${GROQ_API_KEY}
+      base-url: https://api.groq.com/openai/v1
+      chat:
+        model: openai/gpt-oss-120b
+tavily:
+  api-key: ${TAVILY_API_KEY}
+  base-url: https://api.tavily.com/search
