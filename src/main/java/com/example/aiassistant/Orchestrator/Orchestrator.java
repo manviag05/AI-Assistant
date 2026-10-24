@@ -1,7 +1,9 @@
 package com.example.aiassistant.Orchestrator;
 
-import com.example.aiassistant.Service.PlannerServiceInterfaceImpl;
-import com.example.aiassistant.Service.ResearchServiceInterfaceImpl;
+import com.example.aiassistant.Interfaces.PlannerServiceInterface;
+import com.example.aiassistant.Interfaces.ResearchServiceInterface;
+import com.example.aiassistant.Interfaces.ResponseWriterServiceInterface;
+import com.example.aiassistant.Interfaces.ValidatorServiceInterface;
 import com.example.aiassistant.dto.ChatRequest;
 import com.example.aiassistant.dto.ChatResponse;
 import com.example.aiassistant.model.RequestState;
@@ -9,33 +11,45 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class Orchestrator {
-    //So orchestrator will give requestState its values, it will call planner service get the details from it and set it using setters in requestState
-    private final PlannerServiceInterfaceImpl plannerServiceInterfaceImpl;
-    private final ResearchServiceInterfaceImpl researchServiceInterfaceImpl;
 
-    public Orchestrator(PlannerServiceInterfaceImpl plannerServiceInterfaceImpl, ResearchServiceInterfaceImpl researchServiceInterfaceImpl){
-        this.plannerServiceInterfaceImpl = plannerServiceInterfaceImpl;
-        this.researchServiceInterfaceImpl = researchServiceInterfaceImpl;
+    private final PlannerServiceInterface plannerService;
+    private final ResearchServiceInterface researchService;
+    private final ResponseWriterServiceInterface responseWriterService;
+    private final ValidatorServiceInterface validateService;
+
+    public Orchestrator(PlannerServiceInterface plannerService,
+                        ResearchServiceInterface researchService,
+                        ResponseWriterServiceInterface responseWriterService,
+                        ValidatorServiceInterface validateService) {
+        this.plannerService = plannerService;
+        this.researchService = researchService;
+        this.responseWriterService = responseWriterService;
+        this.validateService = validateService;
     }
 
-    public ChatResponse handleChat(ChatRequest chatRequest){
+    public ChatResponse handleChat(ChatRequest chatRequest) {
         RequestState state = new RequestState();
         state.setSessionId(chatRequest.getSessionId());
         state.setMessageRequest(chatRequest.getMessage());
 
-        state = plannerServiceInterfaceImpl.plan(state);
+        state = plannerService.plan(state);
 
-        if(state.isExternalResearch()){
-            state = researchServiceInterfaceImpl.research(state);
+        if (state.isExternalResearch()) {
+            state = researchService.research(state);
+        }
+
+        state = responseWriterService.write(state);
+        state = validateService.validate(state);
+
+        if (!state.isValid()) {
+            return new ChatResponse(
+                    state.getSessionId(),
+                    "Sorry, I couldn't provide reliable information for this request. Please try again."
+            );
         }
 
         return new ChatResponse(
-                state.getSessionId(),
-                "Intent: " + state.getIntent()
-                        + ", researchNeeded: " + state.isExternalResearch()
-                        + ", subTasks: " + state.getSubTasks()
-                        + " | findings: " + state.getFindings()
+                state.getSessionId(), state.getResponse()
         );
     }
-
 }

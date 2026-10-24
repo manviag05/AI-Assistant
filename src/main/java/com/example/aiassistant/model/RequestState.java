@@ -33,4 +33,6 @@ public class RequestState {
     //ResponseWriter
     private String response;
 
+    public void setIsValid(boolean b) {
+    }
 }
